@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "428685498987",
+    "firebase_url": "https://task-management-app-974ac-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "task-management-app-974ac",
+    "storage_bucket": "task-management-app-974ac.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:428685498987:android:21f3c28d7a62d88dca6f2e",
+        "android_client_info": {
+          "package_name": "com.example.task_management_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCy6QulggrmZs0q905TqAYDsngu5c48VLE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
