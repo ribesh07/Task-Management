@@ -26,6 +26,10 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      backgroundColor: Colors.lightBlue[100],
+      // shadowColor: Colors.blue,
+      surfaceTintColor: Colors.blue[100],
+      elevation: 60,
       title: const Text(
         'Edit Description',
         textAlign: TextAlign.center,
@@ -52,6 +56,10 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel')),
         ElevatedButton(
+          style: ButtonStyle(
+            backgroundColor: WidgetStateProperty.all<Color>(Colors.blue),
+            foregroundColor: WidgetStateProperty.all<Color>(Colors.white),
+          ),
           onPressed: () {
             if (_formKey.currentState!.validate()) {
               widget.ref.read(taskDatasourceProvider).updateTaskDescription(

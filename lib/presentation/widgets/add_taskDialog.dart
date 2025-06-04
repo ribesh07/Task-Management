@@ -6,7 +6,7 @@ import 'package:task_management_app/presentation/providers/task_provider.dart';
 class AddTaskDialog extends StatefulWidget {
   final WidgetRef ref;
 
-  AddTaskDialog({required this.ref});
+  const AddTaskDialog({super.key, required this.ref});
 
   @override
   _AddTaskDialogState createState() => _AddTaskDialogState();
@@ -20,6 +20,10 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      backgroundColor: Colors.lightBlue[100],
+      // shadowColor: Colors.blue,
+      surfaceTintColor: Colors.blue[50],
+
       title: const Text('Create Task'),
       content: Form(
         key: _formKey,
@@ -68,6 +72,10 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel')),
         ElevatedButton(
+          style: ButtonStyle(
+            backgroundColor: WidgetStateProperty.all<Color>(Colors.blue),
+            foregroundColor: WidgetStateProperty.all<Color>(Colors.white),
+          ),
           onPressed: () {
             if (_formKey.currentState!.validate()) {
               final task = TaskModel(
