@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:task_management_app/data/models/task_model.dart';
+import 'package:task_management_app/domain/services/sendfcm.dart';
 import 'package:task_management_app/presentation/providers/task_provider.dart';
 
 class AddTaskDialog extends StatefulWidget {
@@ -76,7 +77,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
             backgroundColor: WidgetStateProperty.all<Color>(Colors.blue),
             foregroundColor: WidgetStateProperty.all<Color>(Colors.white),
           ),
-          onPressed: () {
+          onPressed: () async {
             if (_formKey.currentState!.validate()) {
               final task = TaskModel(
                 id: '', // Firebase or your DB should auto-generate ID
@@ -85,8 +86,21 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 status: 'Pending',
               );
               widget.ref.read(taskDatasourceProvider).addTask(task);
+              await sendFCMToAllTokens(
+                title: 'Task Status Updated',
+                body: 'Task "${task.title}" for ${task.description}',
+              );
               Navigator.pop(context);
             }
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Task added to Pending '),
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: Colors.blue,
+                duration: Duration(seconds: 2),
+              ),
+            );
           },
           child: const Text('Add'),
         )

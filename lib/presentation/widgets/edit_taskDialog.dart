@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:task_management_app/data/models/task_model.dart';
+import 'package:task_management_app/domain/services/sendfcm.dart';
 import 'package:task_management_app/presentation/providers/task_provider.dart';
 
 class EditTaskDialog extends StatefulWidget {
@@ -60,10 +61,16 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
             backgroundColor: WidgetStateProperty.all<Color>(Colors.blue),
             foregroundColor: WidgetStateProperty.all<Color>(Colors.white),
           ),
-          onPressed: () {
+          onPressed: () async {
             if (_formKey.currentState!.validate()) {
               widget.ref.read(taskDatasourceProvider).updateTaskDescription(
                   widget.task.id, _descController.text.trim());
+
+              await sendFCMToAllTokens(
+                title: 'Task Status Updated',
+                body:
+                    'Task "${widget.task.title}" updated to ${widget.task.description}',
+              );
               Navigator.pop(context);
             }
           },

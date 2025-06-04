@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:task_management_app/data/models/task_model.dart';
+import 'package:task_management_app/domain/services/sendfcm.dart';
 import 'package:task_management_app/presentation/providers/task_provider.dart';
 import 'package:task_management_app/presentation/widgets/edit_taskdialog.dart';
 
 Widget taskCard(
     TaskModel task, WidgetRef ref, BuildContext context, List<String> stages) {
+  final hoveredTask = ref.watch(draggedTaskProvider);
   return Card(
     shadowColor: Colors.blue,
     color: Colors.blue.shade50,
@@ -47,12 +49,24 @@ Widget taskCard(
                     foregroundColor:
                         WidgetStateProperty.all<Color>(Colors.white),
                   ),
-                  onPressed: () {
+                  onPressed: () async {
                     final index = stages.indexOf(task.status);
                     final next = stages[index + 1];
                     ref
                         .read(taskDatasourceProvider)
                         .updateTaskStatus(task.id, next);
+                    await sendFCMToAllTokens(
+                      title: 'Task Status Updated',
+                      body: 'Task "${task.title}" moved to ${task.status}',
+                    );
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Task moved to ${hoveredTask!.status}'),
+                        behavior: SnackBarBehavior.floating,
+                        backgroundColor: Colors.blue,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
                   },
                   child: Text(
                       'Move to ${stages[stages.indexOf(task.status) + 1]}'),

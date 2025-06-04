@@ -3,6 +3,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:task_management_app/domain/services/sendfcm.dart';
 import 'package:task_management_app/main.dart';
 import 'package:task_management_app/presentation/widgets/add_taskdialog.dart';
 import 'package:task_management_app/presentation/widgets/card.dart';
@@ -94,14 +95,15 @@ class _HomePageState extends ConsumerState<HomePage> {
     final token = await FirebaseMessaging.instance.getToken();
     print('FCM Token: $token');
 
-    // Save to Firestore (optional, if user is logged in)
-    // You can save it under a collection like 'users' or 'devices'
     if (token != null) {
       await FirebaseFirestore.instance.collection('tokens').doc(token).set({
         'token': token,
         'createdAt': FieldValue.serverTimestamp(),
       });
     }
+
+    await FirebaseMessaging.instance.subscribeToTopic('all');
+    print('Subscribed to topic: all');
 
     // Listen for token refresh
     FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
@@ -110,6 +112,9 @@ class _HomePageState extends ConsumerState<HomePage> {
         'token': newToken,
         'refreshedAt': FieldValue.serverTimestamp(),
       });
+      // Re-subscribe to topic after refresh
+      await FirebaseMessaging.instance.subscribeToTopic('all');
+      print('Re-subscribed to topic: all');
     });
   }
 
@@ -188,12 +193,24 @@ class _HomePageState extends ConsumerState<HomePage> {
                     final task = details.data;
                     return task.status != status;
                   },
-                  onAcceptWithDetails: (details) {
+                  onAcceptWithDetails: (details) async {
                     final task = details.data;
                     ref
                         .read(taskDatasourceProvider)
                         .updateTaskStatus(task.id, status);
                     ref.read(hoveredStatusProvider.notifier).state = null;
+                    await sendFCMToAllTokens(
+                      title: 'Task Status Updated',
+                      body: 'Task "${task.title}" moved to $status',
+                    );
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Task moved to $status'),
+                        behavior: SnackBarBehavior.floating,
+                        backgroundColor: Colors.blue,
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
                   },
                   onLeave: (details) {
                     ref.read(hoveredStatusProvider.notifier).state = null;
@@ -210,6 +227,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                         boxShadow: [
                           BoxShadow(
                             color: const Color.fromARGB(255, 36, 98, 192)
+                                // ignore: deprecated_member_use
                                 .withOpacity(0.9),
                             spreadRadius: 2,
                             blurRadius: 5,
