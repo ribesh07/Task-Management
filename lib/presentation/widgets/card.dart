@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:task_management_app/data/models/task_model.dart';
 import 'package:task_management_app/presentation/providers/task_provider.dart';
-import 'package:task_management_app/presentation/widgets/edit_taskDialog.dart';
+import 'package:task_management_app/presentation/widgets/edit_taskdialog.dart';
 
 Widget taskCard(
     TaskModel task, WidgetRef ref, BuildContext context, List<String> stages) {
@@ -81,7 +81,7 @@ Widget taskCardDraggable(
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              if (hoveredTask.status != 'Completed')
+              if (draggedTask != 'Completed')
                 ElevatedButton(
                   onPressed: () {},
                   child: Text('Move to $draggedTask'),

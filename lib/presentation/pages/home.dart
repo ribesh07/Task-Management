@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:task_management_app/presentation/widgets/add_taskDialog.dart';
+import 'package:task_management_app/presentation/widgets/add_taskdialog.dart';
 import 'package:task_management_app/presentation/widgets/card.dart';
 import '../providers/task_provider.dart';
 import '../../data/models/task_model.dart';
