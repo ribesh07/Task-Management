@@ -7,9 +7,10 @@ import 'package:task_management_app/presentation/widgets/edit_taskDialog.dart';
 Widget taskCard(
     TaskModel task, WidgetRef ref, BuildContext context, List<String> stages) {
   return Card(
+    elevation: 4,
     margin: const EdgeInsets.all(8),
     child: Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(17),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

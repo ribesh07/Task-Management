@@ -78,7 +78,7 @@ class HomePage extends ConsumerWidget {
       body: taskAsync.when(
         data: (tasks) {
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(8),
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             child: Row(
@@ -86,8 +86,12 @@ class HomePage extends ConsumerWidget {
                 final filtered =
                     tasks.where((t) => t.status == status).toList();
                 return DragTarget<TaskModel>(
-                  onWillAccept: (task) => task!.status != status,
-                  onAccept: (task) {
+                  onWillAcceptWithDetails: (details) {
+                    final task = details.data;
+                    return task.status != status;
+                  },
+                  onAcceptWithDetails: (details) {
+                    final task = details.data;
                     ref
                         .read(taskDatasourceProvider)
                         .updateTaskStatus(task.id, status);
