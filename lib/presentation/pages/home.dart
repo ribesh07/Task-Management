@@ -16,32 +16,26 @@ class HomePage extends ConsumerWidget {
 
     Widget taskCardContent(
         TaskModel task, WidgetRef ref, BuildContext context) {
-      return taskCard(
-        task,
-        ref,
-        context,
-        stages,
-      );
+      return taskCard(task, ref, context, stages);
     }
 
     Widget buildTaskCard(TaskModel task, WidgetRef ref) {
       return LongPressDraggable<TaskModel>(
         data: task,
-        feedback: Material(
-          color: Colors.transparent,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 350),
-            child: Opacity(
-              opacity: 0.7,
-              child: taskCard(
-                task,
-                ref,
-                context,
-                stages,
+        feedback: Consumer(builder: (context, ref, _) {
+          final draggedTask = ref.watch(draggedTaskProvider);
+          return Material(
+            color: Colors.transparent,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 350),
+              child: Opacity(
+                opacity: 0.7,
+                child: taskCardDraggable(
+                    hoveredTask: draggedTask, ref, context, stages),
               ),
             ),
-          ),
-        ),
+          );
+        }),
         childWhenDragging:
             Opacity(opacity: 0.4, child: taskCardContent(task, ref, context)),
         child: taskCardContent(task, ref, context),
@@ -95,12 +89,19 @@ class HomePage extends ConsumerWidget {
                     ref
                         .read(taskDatasourceProvider)
                         .updateTaskStatus(task.id, status);
+                    ref.read(hoveredStatusProvider.notifier).state = null;
+                  },
+                  onLeave: (details) {
+                    ref.read(hoveredStatusProvider.notifier).state = null;
+                  },
+                  onMove: (details) {
+                    ref.read(hoveredStatusProvider.notifier).state = status;
+                    ref.read(draggedTaskProvider.notifier).state = details.data;
                   },
                   builder: (context, candidateData, rejectedData) {
                     return Container(
                       width: MediaQuery.of(context).size.width * 0.8,
                       margin: const EdgeInsets.symmetric(horizontal: 8),
-                      // padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         boxShadow: [
                           BoxShadow(

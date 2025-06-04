@@ -59,3 +59,41 @@ Widget taskCard(
     ),
   );
 }
+
+Widget taskCardDraggable(
+    WidgetRef ref, BuildContext context, List<String> stages,
+    {TaskModel? hoveredTask}) {
+  final draggedTask = ref.watch(hoveredStatusProvider);
+  return Card(
+    elevation: 4,
+    margin: const EdgeInsets.all(8),
+    child: Container(
+      padding: const EdgeInsets.all(17),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(hoveredTask!.title,
+              style:
+                  const TextStyle(fontSize: 18, fontWeight: FontWeight.w500)),
+          const SizedBox(height: 8),
+          Text(hoveredTask.description, style: const TextStyle(fontSize: 16)),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              if (hoveredTask.status != 'Completed')
+                ElevatedButton(
+                  onPressed: () {},
+                  child: Text('Move to $draggedTask'),
+                ),
+              if (hoveredTask.status != 'Completed')
+                const Icon(Icons.delete, color: Colors.red),
+              if (hoveredTask.status != 'Completed')
+                const Icon(Icons.edit, color: Colors.blue),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
+}
