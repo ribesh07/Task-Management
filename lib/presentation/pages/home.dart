@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:task_management_app/presentation/widgets/add_taskDialog.dart';
-import 'package:task_management_app/presentation/widgets/edit_taskDialog.dart';
-// import 'package:uuid/uuid.dart';
+import 'package:task_management_app/presentation/widgets/card.dart';
 import '../providers/task_provider.dart';
 import '../../data/models/task_model.dart';
 
@@ -15,6 +14,40 @@ class HomePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     AsyncValue<List<TaskModel>> taskAsync = ref.watch(taskStreamProvider);
 
+    Widget taskCardContent(
+        TaskModel task, WidgetRef ref, BuildContext context) {
+      return taskCard(
+        task,
+        ref,
+        context,
+        stages,
+      );
+    }
+
+    Widget buildTaskCard(TaskModel task, WidgetRef ref) {
+      return LongPressDraggable<TaskModel>(
+        data: task,
+        feedback: Material(
+          color: Colors.transparent,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 350),
+            child: Opacity(
+              opacity: 0.7,
+              child: taskCard(
+                task,
+                ref,
+                context,
+                stages,
+              ),
+            ),
+          ),
+        ),
+        childWhenDragging:
+            Opacity(opacity: 0.4, child: taskCardContent(task, ref, context)),
+        child: taskCardContent(task, ref, context),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Task Management',
@@ -22,7 +55,6 @@ class HomePage extends ConsumerWidget {
               fontSize: 24,
               fontWeight: FontWeight.w600,
             )),
-        // centerTitle: true,
         backgroundColor: Colors.blue,
         actions: [
           IconButton(
@@ -53,108 +85,55 @@ class HomePage extends ConsumerWidget {
               children: stages.map((status) {
                 final filtered =
                     tasks.where((t) => t.status == status).toList();
-                return SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.8,
-                  child: Column(
-                    children: [
-                      Text(status,
-                          style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue)),
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: filtered.length,
-                          itemBuilder: (_, i) {
-                            final task = filtered[i];
-                            return Card(
-                              margin: const EdgeInsets.all(8),
-                              // child: ListTile(
-                              //   title: Text(task.title,
-                              //       style: const TextStyle(
-                              //           fontSize: 18,
-                              //           fontWeight: FontWeight.w500)),
-                              //   subtitle: Text(task.description,
-                              //       style: const TextStyle(fontSize: 16)),
-                              //   trailing: status != 'Completed'
-                              //       ? ElevatedButton(
-                              //           onPressed: () {
-                              //             final index = stages.indexOf(status);
-                              //             final next = stages[index + 1];
-                              //             ref
-                              //                 .read(taskDatasourceProvider)
-                              //                 .updateTaskStatus(task.id, next);
-                              //           },
-                              //           child: Text(
-                              //               'Move to ${stages[stages.indexOf(status) + 1]}'),
-                              //         )
-                              //       : null,
-                              // ),
-
-                              child: Container(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(task.title,
-                                        style: const TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w500)),
-                                    const SizedBox(height: 8),
-                                    Text(task.description,
-                                        style: const TextStyle(fontSize: 16)),
-                                    const SizedBox(height: 14),
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        if (status != 'Completed')
-                                          ElevatedButton(
-                                            onPressed: () {
-                                              final index =
-                                                  stages.indexOf(status);
-                                              final next = stages[index + 1];
-                                              ref
-                                                  .read(taskDatasourceProvider)
-                                                  .updateTaskStatus(
-                                                      task.id, next);
-                                            },
-                                            child: Text(
-                                                'Move to ${stages[stages.indexOf(status) + 1]}'),
-                                          ),
-                                        if (status != 'Completed')
-                                          IconButton(
-                                            icon: const Icon(Icons.delete,
-                                                color: Colors.red),
-                                            onPressed: () {
-                                              ref
-                                                  .read(taskDatasourceProvider)
-                                                  .deleteTask(task.id);
-                                            },
-                                          ),
-                                        if (status != 'Completed')
-                                          IconButton(
-                                            icon: const Icon(Icons.edit,
-                                                color: Colors.blue),
-                                            onPressed: () {
-                                              showDialog(
-                                                context: context,
-                                                builder: (_) => EditTaskDialog(
-                                                    ref: ref, task: task),
-                                              );
-                                            },
-                                          ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
+                return DragTarget<TaskModel>(
+                  onWillAccept: (task) => task!.status != status,
+                  onAccept: (task) {
+                    ref
+                        .read(taskDatasourceProvider)
+                        .updateTaskStatus(task.id, status);
+                  },
+                  builder: (context, candidateData, rejectedData) {
+                    return Container(
+                      width: MediaQuery.of(context).size.width * 0.8,
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      // padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color.fromARGB(255, 36, 98, 192)
+                                .withOpacity(0.9),
+                            spreadRadius: 2,
+                            blurRadius: 5,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                        color: Colors.blue[100],
+                        borderRadius: BorderRadius.circular(8),
+                        border: candidateData.isNotEmpty
+                            ? Border.all(color: Colors.blue, width: 2)
+                            : null,
                       ),
-                    ],
-                  ),
+                      child: Column(
+                        children: [
+                          Text(status,
+                              style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue)),
+                          const SizedBox(height: 10),
+                          Expanded(
+                            child: ListView.builder(
+                              itemCount: filtered.length,
+                              itemBuilder: (_, i) {
+                                final task = filtered[i];
+                                return buildTaskCard(task, ref);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 );
               }).toList(),
             ),
