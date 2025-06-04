@@ -38,6 +38,10 @@ dependencies:
   cloud_firestore: ^5.4.4
   flutter_riverpod: ^2.5.1
   uuid: ^4.5.0
+  firebase_messaging: ^15.2.6
+  flutter_local_notifications: ^19.2.1
+  http: ^1.4.0
+  googleapis_auth: ^2.0.0
 
 dev_dependencies:
   flutter_test:
@@ -90,3 +94,6 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+  assets:
+    - assets/services.json

@@ -1,16 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:task_management_app/data/models/task_model.dart';
+import 'package:task_management_app/domain/services/sendfcm.dart';
 import 'package:task_management_app/presentation/providers/task_provider.dart';
 import 'package:task_management_app/presentation/widgets/edit_taskdialog.dart';
 
 Widget taskCard(
     TaskModel task, WidgetRef ref, BuildContext context, List<String> stages) {
+  final hoveredTask = ref.watch(draggedTaskProvider);
   return Card(
-    elevation: 4,
+    shadowColor: Colors.blue,
+    color: Colors.blue.shade50,
+    surfaceTintColor: Colors.blue,
+    elevation: 80,
     margin: const EdgeInsets.all(8),
     child: Container(
       padding: const EdgeInsets.all(17),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        // gradient: LinearGradient(
+        //   colors: [
+        //     const Color.fromARGB(255, 170, 77, 193),
+        //     const Color.fromARGB(255, 12, 138, 227)
+        //   ],
+        //   begin: Alignment.topLeft,
+        //   end: Alignment.bottomRight,
+        // ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -25,12 +41,32 @@ Widget taskCard(
             children: [
               if (task.status != 'Completed')
                 ElevatedButton(
-                  onPressed: () {
+                  style: ButtonStyle(
+                    elevation: WidgetStateProperty.all<double>(2),
+                    enableFeedback: true,
+                    backgroundColor:
+                        WidgetStateProperty.all<Color>(Colors.blue.shade500),
+                    foregroundColor:
+                        WidgetStateProperty.all<Color>(Colors.white),
+                  ),
+                  onPressed: () async {
                     final index = stages.indexOf(task.status);
                     final next = stages[index + 1];
                     ref
                         .read(taskDatasourceProvider)
                         .updateTaskStatus(task.id, next);
+                    await sendFCMToAllTokens(
+                      title: 'Task Status Updated',
+                      body: 'Task "${task.title}" moved to ${task.status}',
+                    );
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Task moved to ${hoveredTask!.status}'),
+                        behavior: SnackBarBehavior.floating,
+                        backgroundColor: Colors.blue,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
                   },
                   child: Text(
                       'Move to ${stages[stages.indexOf(task.status) + 1]}'),
@@ -39,7 +75,37 @@ Widget taskCard(
                 IconButton(
                   icon: const Icon(Icons.delete, color: Colors.red),
                   onPressed: () {
-                    ref.read(taskDatasourceProvider).deleteTask(task.id);
+                    AlertDialog alert = AlertDialog(
+                      backgroundColor: Colors.blue[400],
+                      surfaceTintColor: Colors.blue[50],
+                      elevation: 60,
+                      title: const Text('Delete Task'),
+                      content: const Text(
+                          'Are you sure you want to delete this task?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel'),
+                        ),
+                        ElevatedButton(
+                          style: ButtonStyle(
+                            backgroundColor:
+                                WidgetStateProperty.all<Color>(Colors.red),
+                            foregroundColor:
+                                WidgetStateProperty.all<Color>(Colors.white),
+                          ),
+                          onPressed: () {
+                            ref
+                                .read(taskDatasourceProvider)
+                                .deleteTask(task.id);
+                            Navigator.pop(context);
+                          },
+                          child: const Text('Delete'),
+                        ),
+                      ],
+                    );
+                    showDialog(context: context, builder: (_) => alert);
+                    // ref.read(taskDatasourceProvider).deleteTask(task.id);
                   },
                 ),
               if (task.status != 'Completed')
@@ -65,7 +131,10 @@ Widget taskCardDraggable(
     {TaskModel? hoveredTask}) {
   final draggedTask = ref.watch(hoveredStatusProvider);
   return Card(
-    elevation: 4,
+    shadowColor: Colors.blue,
+    color: Colors.blue,
+    surfaceTintColor: Colors.blue,
+    elevation: 70,
     margin: const EdgeInsets.all(8),
     child: Container(
       padding: const EdgeInsets.all(17),
@@ -83,6 +152,14 @@ Widget taskCardDraggable(
             children: [
               if (draggedTask != 'Completed')
                 ElevatedButton(
+                  style: ButtonStyle(
+                    elevation: WidgetStateProperty.all<double>(2),
+                    enableFeedback: true,
+                    backgroundColor:
+                        WidgetStateProperty.all<Color>(Colors.blue.shade500),
+                    foregroundColor:
+                        WidgetStateProperty.all<Color>(Colors.white),
+                  ),
                   onPressed: () {},
                   child: Text('Move to $draggedTask'),
                 ),

@@ -1,17 +1,126 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:task_management_app/domain/services/sendfcm.dart';
+import 'package:task_management_app/main.dart';
 import 'package:task_management_app/presentation/widgets/add_taskdialog.dart';
 import 'package:task_management_app/presentation/widgets/card.dart';
 import '../providers/task_provider.dart';
 import '../../data/models/task_model.dart';
 
-class HomePage extends ConsumerWidget {
-  final List<String> stages = ['Pending', 'Running', 'Testing', 'Completed'];
-
-  HomePage({super.key});
+class HomePage extends ConsumerStatefulWidget {
+  const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends ConsumerState<HomePage> {
+  final List<String> stages = ['Pending', 'Running', 'Testing', 'Completed'];
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize Firebase Messaging
+    requestNotificationPermission().then((_) {
+      _initFCMToken();
+    });
+
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      RemoteNotification? notification = message.notification;
+      if (notification != null) {
+        flutterLocalNotificationsPlugin.show(
+          notification.hashCode,
+          notification.title,
+          notification.body,
+          NotificationDetails(
+            android: AndroidNotificationDetails(
+              'default_channel',
+              'Task Updates',
+              importance: Importance.max,
+              priority: Priority.high,
+            ),
+          ),
+        );
+      }
+    });
+
+    // Background tap
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      final notification = message.notification;
+      if (notification != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Opened from background: ${notification.title}'),
+        ));
+      }
+    });
+
+    // Terminated launch
+    FirebaseMessaging.instance.getInitialMessage().then((message) {
+      if (message != null && message.notification != null) {
+        final notification = message.notification!;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Launched from notification: ${notification.title}'),
+        ));
+      }
+    });
+  }
+
+  Future<void> requestNotificationPermission() async {
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+
+    NotificationSettings settings = await messaging.requestPermission(
+      alert: true,
+      announcement: false,
+      badge: true,
+      carPlay: false,
+      criticalAlert: false,
+      provisional: false,
+      sound: true,
+    );
+
+    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      print('Notification permission granted');
+    } else if (settings.authorizationStatus ==
+        AuthorizationStatus.provisional) {
+      print(' Provisional permission granted');
+    } else {
+      print(' Notification permission denied');
+    }
+  }
+
+  void _initFCMToken() async {
+    final token = await FirebaseMessaging.instance.getToken();
+    print('FCM Token: $token');
+
+    if (token != null) {
+      await FirebaseFirestore.instance.collection('tokens').doc(token).set({
+        'token': token,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    }
+
+    await FirebaseMessaging.instance.subscribeToTopic('all');
+    print('Subscribed to topic: all');
+
+    // Listen for token refresh
+    FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
+      print('FCM Token refreshed: $newToken');
+      await FirebaseFirestore.instance.collection('tokens').doc(newToken).set({
+        'token': newToken,
+        'refreshedAt': FieldValue.serverTimestamp(),
+      });
+      // Re-subscribe to topic after refresh
+      await FirebaseMessaging.instance.subscribeToTopic('all');
+      print('Re-subscribed to topic: all');
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ref = this.ref;
     AsyncValue<List<TaskModel>> taskAsync = ref.watch(taskStreamProvider);
 
     Widget taskCardContent(
@@ -84,12 +193,24 @@ class HomePage extends ConsumerWidget {
                     final task = details.data;
                     return task.status != status;
                   },
-                  onAcceptWithDetails: (details) {
+                  onAcceptWithDetails: (details) async {
                     final task = details.data;
                     ref
                         .read(taskDatasourceProvider)
                         .updateTaskStatus(task.id, status);
                     ref.read(hoveredStatusProvider.notifier).state = null;
+                    await sendFCMToAllTokens(
+                      title: 'Task Status Updated',
+                      body: 'Task "${task.title}" moved to $status',
+                    );
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Task moved to $status'),
+                        behavior: SnackBarBehavior.floating,
+                        backgroundColor: Colors.blue,
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
                   },
                   onLeave: (details) {
                     ref.read(hoveredStatusProvider.notifier).state = null;
@@ -106,13 +227,19 @@ class HomePage extends ConsumerWidget {
                         boxShadow: [
                           BoxShadow(
                             color: const Color.fromARGB(255, 36, 98, 192)
+                                // ignore: deprecated_member_use
                                 .withOpacity(0.9),
                             spreadRadius: 2,
                             blurRadius: 5,
                             offset: const Offset(0, 3),
                           ),
                         ],
-                        color: Colors.blue[100],
+                        color: Colors.blue.shade100,
+                        // gradient: LinearGradient(
+                        //   colors: [Colors.blue.shade200, Colors.blue.shade50],
+                        //   end: Alignment.topRight,
+                        //   begin: Alignment.topCenter,
+                        // ),
                         borderRadius: BorderRadius.circular(8),
                         border: candidateData.isNotEmpty
                             ? Border.all(color: Colors.blue, width: 2)
@@ -120,11 +247,12 @@ class HomePage extends ConsumerWidget {
                       ),
                       child: Column(
                         children: [
+                          const SizedBox(height: 10),
                           Text(status,
-                              style: const TextStyle(
+                              style: TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.blue)),
+                                  color: Colors.blue.shade700)),
                           const SizedBox(height: 10),
                           Expanded(
                             child: ListView.builder(
