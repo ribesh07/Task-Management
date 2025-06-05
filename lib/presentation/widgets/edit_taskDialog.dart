@@ -8,7 +8,7 @@ class EditTaskDialog extends StatefulWidget {
   final WidgetRef ref;
   final TaskModel task;
 
-  EditTaskDialog({required this.ref, required this.task});
+  const EditTaskDialog({required this.ref, required this.task});
 
   @override
   _EditTaskDialogState createState() => _EditTaskDialogState();
@@ -66,12 +66,12 @@ class _EditTaskDialogState extends State<EditTaskDialog> {
               widget.ref.read(taskDatasourceProvider).updateTaskDescription(
                   widget.task.id, _descController.text.trim());
 
+              Navigator.pop(context);
               await sendFCMToAllTokens(
                 title: 'Task Status Updated',
                 body:
                     'Task "${widget.task.title}" updated to ${widget.task.description}',
               );
-              Navigator.pop(context);
             }
           },
           child: const Text('Update'),

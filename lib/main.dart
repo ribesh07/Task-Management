@@ -18,7 +18,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       notification.hashCode,
       notification.title,
       notification.body,
-      NotificationDetails(
+      const NotificationDetails(
         android: AndroidNotificationDetails(
           'default_channel',
           'Task Updates',
@@ -58,7 +58,7 @@ class TaskApp extends StatelessWidget {
       title: 'Taskly',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: HomePage(),
+      home: const HomePage(),
     );
   }
 }
