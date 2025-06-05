@@ -171,9 +171,13 @@ class _HomePageState extends ConsumerState<HomePage> {
           IconButton(
               onPressed: () {
                 Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => ChatPage()));
+                    MaterialPageRoute(builder: (context) => const ChatPage()));
               },
-              icon: const Icon(Icons.chat_outlined)),
+              icon: const Icon(
+                Icons.chat_outlined,
+                color: Colors.black,
+                size: 30,
+              )),
           IconButton(
             icon: const Icon(
               Icons.refresh,

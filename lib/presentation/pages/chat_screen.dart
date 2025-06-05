@@ -12,16 +12,16 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 class ChatPage extends ConsumerStatefulWidget {
   final String chatId;
 
-  const ChatPage({super.key, this.chatId = 'global'});
+  const ChatPage({super.key, this.chatId = 'Global'});
 
   @override
   ConsumerState<ChatPage> createState() => _ChatPageState();
 }
 
 class _ChatPageState extends ConsumerState<ChatPage> {
-  // final List<Map<String, dynamic>> _messages = [];
   final _controller = TextEditingController();
   late final WebSocketChannel _channel;
+  String? _tappedMessageKey;
 
   @override
   void initState() {
@@ -29,13 +29,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     ref.read(fcmTokenInitializerProvider);
 
     _channel = WebSocketChannel.connect(
-      Uri.parse('wss://websocket-server-2eur.onrender.com'),
+      Uri.parse('wss://socket-7mzn.onrender.com'),
     );
 
     _channel.stream.listen((data) {
       final msg = jsonDecode(data);
       if (msg['chatId'] == widget.chatId) {
         // setState(() => _messages.add(msg));
+        print('/n/n/nSocket : $msg');
       }
     });
   }
@@ -52,8 +53,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     late final chatStream = ref.watch(chatStreamProvider(widget.chatId));
 
     final userToken = ref.watch(fcmTokenProvider);
-    if (userToken == null)
+    if (userToken == null) {
       return const Center(child: CircularProgressIndicator());
+    }
 
     void _send() async {
       final text = _controller.text.trim();
@@ -66,6 +68,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       };
 
       _channel.sink.add(jsonEncode(message));
+      setState(() {});
       _controller.clear();
 
       await ref.read(chatRepositoryProvider).saveMessage(
@@ -75,7 +78,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           );
       await sendFCMToAllTokens(
         title: 'Chat',
-        body: '"${widget.chatId}" : "$text"',
+        body: '${widget.chatId} : $text',
       );
     }
 
@@ -97,54 +100,66 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         return Container();
       }
       final ts = timestamp as Timestamp;
-      return Align(
-        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-        child: Column(
-          crossAxisAlignment:
-              isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-          children: [
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 2,
-                    offset: Offset(0, 2),
+      final messageKey = '${msg['token']}_${ts.millisecondsSinceEpoch}';
+      final isTapped = _tappedMessageKey == messageKey;
+
+      return GestureDetector(
+        onTap: () {
+          setState(() {
+            _tappedMessageKey =
+                _tappedMessageKey == messageKey ? null : messageKey;
+          });
+        },
+        child: Align(
+          alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+          child: Column(
+            crossAxisAlignment:
+                isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.blue,
+                      blurRadius: 2,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                  color: isMe ? Colors.blue[400] : Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(msg['text'] ?? '',
+                    style: const TextStyle(fontSize: 16)),
+              ),
+              if (isTapped)
+                Padding(
+                  padding: const EdgeInsets.only(
+                      left: 8, right: 8, top: 2, bottom: 2),
+                  child: Row(
+                    mainAxisAlignment:
+                        isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+                    children: [
+                      Text(formatRelativeTime(ts),
+                          style: const TextStyle(
+                            fontSize: 12,
+                          )),
+                      const SizedBox(width: 8),
+                      Text(("By ${msg['token'].substring(0, 6)}"),
+                          style: const TextStyle(fontSize: 12)),
+                    ],
                   ),
-                ],
-                color: isMe ? Colors.blue[400] : Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child:
-                  Text(msg['text'] ?? '', style: const TextStyle(fontSize: 16)),
-            ),
-            Padding(
-              padding:
-                  const EdgeInsets.only(left: 8, right: 8, top: 2, bottom: 2),
-              child: Row(
-                mainAxisAlignment:
-                    isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-                children: [
-                  Text(formatRelativeTime(ts),
-                      style: const TextStyle(
-                        fontSize: 12,
-                      )),
-                  const SizedBox(width: 8),
-                  Text(("By ${msg['token'].substring(0, 6)}"),
-                      style: const TextStyle(fontSize: 12)),
-                ],
-              ),
-            )
-          ],
+                ),
+            ],
+          ),
         ),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Chat - ${widget.chatId}',
+        title: Text('${widget.chatId} Chat',
             style: const TextStyle(
               color: Colors.black,
               fontSize: 24,
@@ -152,44 +167,71 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             )),
         backgroundColor: Colors.blue,
       ),
-      backgroundColor: Colors.blue[100],
-      body: Column(
-        children: [
-          Expanded(
-            child: chatStream.when(
-              data: (messages) => ListView.builder(
-                reverse: true,
-                itemCount: messages.length,
-                itemBuilder: (_, i) => _buildBubble(messages[i]),
-              ),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error: $e')),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    decoration: const InputDecoration(
-                      hintText: 'Type message...',
-                      border: OutlineInputBorder(),
-                    ),
+      // backgroundColor: Colors.blue[100],
+      body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Container(
+          height: MediaQuery.of(context).size.height - 100,
+          width: double.infinity,
+          padding: const EdgeInsets.only(bottom: 10),
+          decoration: const BoxDecoration(
+              gradient: LinearGradient(
+            colors: [
+              Color.fromARGB(255, 120, 191, 241),
+              Color.fromARGB(255, 251, 250, 252),
+              Color.fromARGB(255, 106, 178, 230),
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomRight,
+          )),
+          child: Column(
+            children: [
+              Expanded(
+                child: chatStream.when(
+                  data: (messages) => ListView.builder(
+                    reverse: true,
+                    itemCount: messages.length,
+                    itemBuilder: (_, i) => _buildBubble(messages[i]),
                   ),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => Center(child: Text('Error: $e')),
                 ),
-                const SizedBox(width: 8),
-                IconButton(
-                  iconSize: 40,
-                  color: Colors.blue,
-                  onPressed: _send,
-                  icon: const Icon(Icons.send),
-                )
-              ],
-            ),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 15),
+                child: Row(
+                  children: [
+                    // const SizedBox(height: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        decoration: const InputDecoration(
+                          hintText: 'Type message...',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(20)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(20)),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      iconSize: 43,
+                      color: Colors.blue[700],
+                      onPressed: _send,
+                      icon: const Icon(Icons.send),
+                    )
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
