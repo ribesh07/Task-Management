@@ -1,10 +1,12 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:task_management_app/domain/services/sendfcm.dart';
 import 'package:task_management_app/main.dart';
+import 'package:task_management_app/presentation/pages/chat_screen.dart';
+import 'package:task_management_app/presentation/providers/fcm_token_provider.dart';
 import 'package:task_management_app/presentation/widgets/add_taskdialog.dart';
 import 'package:task_management_app/presentation/widgets/card.dart';
 import '../providers/task_provider.dart';
@@ -25,7 +27,10 @@ class _HomePageState extends ConsumerState<HomePage> {
     super.initState();
     // Initialize Firebase Messaging
     requestNotificationPermission().then((_) {
-      _initFCMToken();
+      // _initFCMToken();
+      ref.read(fcmTokenInitializerProvider);
+      print(
+          'FCM token initialized successfully : ${ref.read(fcmTokenProvider)}');
     });
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -91,36 +96,39 @@ class _HomePageState extends ConsumerState<HomePage> {
     }
   }
 
-  void _initFCMToken() async {
-    final token = await FirebaseMessaging.instance.getToken();
-    print('FCM Token: $token');
+  // void _initFCMToken() async {
+  //   final token = await FirebaseMessaging.instance.getToken();
+  //   print('FCM Token: $token');
 
-    if (token != null) {
-      await FirebaseFirestore.instance.collection('tokens').doc(token).set({
-        'token': token,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-    }
+  //   if (token != null) {
+  //     await FirebaseFirestore.instance.collection('tokens').doc(token).set({
+  //       'token': token,
+  //       'createdAt': FieldValue.serverTimestamp(),
+  //     });
+  //   }
 
-    await FirebaseMessaging.instance.subscribeToTopic('all');
-    print('Subscribed to topic: all');
+  //   await FirebaseMessaging.instance.subscribeToTopic('all');
+  //   print('Subscribed to topic: all');
 
-    // Listen for token refresh
-    FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
-      print('FCM Token refreshed: $newToken');
-      await FirebaseFirestore.instance.collection('tokens').doc(newToken).set({
-        'token': newToken,
-        'refreshedAt': FieldValue.serverTimestamp(),
-      });
-      // Re-subscribe to topic after refresh
-      await FirebaseMessaging.instance.subscribeToTopic('all');
-      print('Re-subscribed to topic: all');
-    });
-  }
+  //   // Listen for token refresh
+  //   FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
+  //     print('FCM Token refreshed: $newToken');
+  //     await FirebaseFirestore.instance.collection('tokens').doc(newToken).set({
+  //       'token': newToken,
+  //       'refreshedAt': FieldValue.serverTimestamp(),
+  //     });
+  //     // Re-subscribe to topic after refresh
+  //     await FirebaseMessaging.instance.subscribeToTopic('all');
+  //     print('Re-subscribed to topic: all');
+  //   });
+  // }
 
   @override
   Widget build(BuildContext context) {
     final ref = this.ref;
+    final token = ref.watch(fcmTokenProvider);
+    print('Current device token: $token');
+
     AsyncValue<List<TaskModel>> taskAsync = ref.watch(taskStreamProvider);
 
     Widget taskCardContent(
@@ -160,6 +168,16 @@ class _HomePageState extends ConsumerState<HomePage> {
             )),
         backgroundColor: Colors.blue,
         actions: [
+          IconButton(
+              onPressed: () {
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => const ChatPage()));
+              },
+              icon: const Icon(
+                Icons.chat_outlined,
+                color: Colors.black,
+                size: 30,
+              )),
           IconButton(
             icon: const Icon(
               Icons.refresh,
