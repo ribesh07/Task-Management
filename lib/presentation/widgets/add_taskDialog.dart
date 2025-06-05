@@ -86,11 +86,11 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                 status: 'Pending',
               );
               widget.ref.read(taskDatasourceProvider).addTask(task);
+              Navigator.pop(context);
               await sendFCMToAllTokens(
                 title: 'Task Status Updated',
                 body: 'Task "${task.title}" for ${task.description}',
               );
-              Navigator.pop(context);
             }
 
             ScaffoldMessenger.of(context).showSnackBar(

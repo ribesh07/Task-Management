@@ -35,7 +35,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           notification.hashCode,
           notification.title,
           notification.body,
-          NotificationDetails(
+          const NotificationDetails(
             android: AndroidNotificationDetails(
               'default_channel',
               'Task Updates',

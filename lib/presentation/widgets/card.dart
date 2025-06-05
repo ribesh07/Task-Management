@@ -55,17 +55,18 @@ Widget taskCard(
                     ref
                         .read(taskDatasourceProvider)
                         .updateTaskStatus(task.id, next);
-                    await sendFCMToAllTokens(
-                      title: 'Task Status Updated',
-                      body: 'Task "${task.title}" moved to ${task.status}',
-                    );
+
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('Task moved to ${hoveredTask!.status}'),
                         behavior: SnackBarBehavior.floating,
                         backgroundColor: Colors.blue,
-                        duration: Duration(seconds: 2),
+                        duration: const Duration(seconds: 1),
                       ),
+                    );
+                    await sendFCMToAllTokens(
+                      title: 'Task Status Updated',
+                      body: 'Task "${task.title}" moved to ${task.status}',
                     );
                   },
                   child: Text(
@@ -99,6 +100,18 @@ Widget taskCard(
                                 .read(taskDatasourceProvider)
                                 .deleteTask(task.id);
                             Navigator.pop(context);
+                            sendFCMToAllTokens(
+                              title: 'Task Deleted',
+                              body: 'Task "${task.title}" has been deleted',
+                            );
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Task deleted'),
+                                behavior: SnackBarBehavior.floating,
+                                backgroundColor: Colors.red,
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
                           },
                           child: const Text('Delete'),
                         ),
