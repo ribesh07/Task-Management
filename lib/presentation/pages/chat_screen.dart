@@ -1,6 +1,7 @@
 import 'dart:convert';
-
-// import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:intl/intl.dart';
+import 'package:timeago/timeago.dart' as timeago;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:task_management_app/domain/services/sendfcm.dart';
@@ -27,7 +28,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     super.initState();
     ref.read(fcmTokenInitializerProvider);
 
-    // ref.watch(chatStreamProvider(widget.chatId));
     _channel = WebSocketChannel.connect(
       Uri.parse('wss://websocket-server-2eur.onrender.com'),
     );
@@ -54,7 +54,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final userToken = ref.watch(fcmTokenProvider);
     if (userToken == null)
       return const Center(child: CircularProgressIndicator());
-    // token = userToken ?? '';
+
     void _send() async {
       final text = _controller.text.trim();
       if (text.isEmpty) return;
@@ -74,29 +74,85 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             text,
           );
       await sendFCMToAllTokens(
-        title: 'Task Status Updated',
-        body: 'Message from "${widget.chatId}" : "$text"',
+        title: 'Chat',
+        body: '"${widget.chatId}" : "$text"',
       );
+    }
+
+    // String formatFullDate(Timestamp timestamp) {
+    //   final dt = timestamp.toDate();
+    //   return DateFormat('yyyy-MM-dd HH:mm').format(dt);
+    // }
+
+    String formatRelativeTime(Timestamp timestamp) {
+      final dt = timestamp.toDate();
+      return timeago.format(dt);
     }
 
     Widget _buildBubble(Map<String, dynamic> msg) {
       final isMe = msg['token'] == userToken;
+
+      final timestamp = msg['timestamp'];
+      if (timestamp == null) {
+        return Container();
+      }
+      final ts = timestamp as Timestamp;
       return Align(
         alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-        child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: isMe ? Colors.blue[100] : Colors.grey[300],
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(msg['text'] ?? '', style: const TextStyle(fontSize: 16)),
+        child: Column(
+          crossAxisAlignment:
+              isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 2,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+                color: isMe ? Colors.blue[400] : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child:
+                  Text(msg['text'] ?? '', style: const TextStyle(fontSize: 16)),
+            ),
+            Padding(
+              padding:
+                  const EdgeInsets.only(left: 8, right: 8, top: 2, bottom: 2),
+              child: Row(
+                mainAxisAlignment:
+                    isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+                children: [
+                  Text(formatRelativeTime(ts),
+                      style: const TextStyle(
+                        fontSize: 12,
+                      )),
+                  const SizedBox(width: 8),
+                  Text(("By ${msg['token'].substring(0, 6)}"),
+                      style: const TextStyle(fontSize: 12)),
+                ],
+              ),
+            )
+          ],
         ),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text('Chat - ${widget.chatId}')),
+      appBar: AppBar(
+        title: Text('Chat - ${widget.chatId}',
+            style: const TextStyle(
+              color: Colors.black,
+              fontSize: 24,
+              fontWeight: FontWeight.w500,
+            )),
+        backgroundColor: Colors.blue,
+      ),
+      backgroundColor: Colors.blue[100],
       body: Column(
         children: [
           Expanded(
@@ -125,9 +181,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 ),
                 const SizedBox(width: 8),
                 IconButton(
+                  iconSize: 40,
+                  color: Colors.blue,
                   onPressed: _send,
                   icon: const Icon(Icons.send),
-                  color: Colors.blue,
                 )
               ],
             ),
